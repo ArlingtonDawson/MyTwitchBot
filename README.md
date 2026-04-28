@@ -174,6 +174,7 @@ Current test coverage:
 ---
 
 ## Project Structure
+```
 MyTwitchBot/
 ├── Ads/
 │   ├── AdMonitor.cs              # Background ad timer and vote management
