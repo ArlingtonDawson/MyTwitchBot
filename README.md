@@ -204,7 +204,7 @@ MyTwitchBot/
 ├── TwitchOAuth.cs                # OAuth2 flow and token refresh
 ├── StreakKeeper.cs               # Win/loss streak tracking
 └── Program.cs                    # Entry point (just 2 lines!)
-
+```
 ---
 
 ## Adding New Commands
