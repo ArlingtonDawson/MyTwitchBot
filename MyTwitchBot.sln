@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.5.11716.220 stable
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyTwitchBot", "MyTwitchBot\MyTwitchBot.csproj", "{C61F871A-13DE-491C-B329-BF2A741C07B2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyTwitchBot.Tests", "MyTwitchBot.Tests\MyTwitchBot.Tests.csproj", "{F740517D-6E50-4059-A4BD-D458178C7CDB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{EE28B76A-9D2B-4A87-A8EA-1A7C07885CAE}"
+	ProjectSection(SolutionItems) = preProject
+		MyTwitchBot\.gitignore = MyTwitchBot\.gitignore
+		README.md = README.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C61F871A-13DE-491C-B329-BF2A741C07B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C61F871A-13DE-491C-B329-BF2A741C07B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C61F871A-13DE-491C-B329-BF2A741C07B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C61F871A-13DE-491C-B329-BF2A741C07B2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F740517D-6E50-4059-A4BD-D458178C7CDB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F740517D-6E50-4059-A4BD-D458178C7CDB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F740517D-6E50-4059-A4BD-D458178C7CDB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F740517D-6E50-4059-A4BD-D458178C7CDB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D619CADE-A9E0-4703-83C7-A885E7C8D135}
+	EndGlobalSection
+EndGlobal
