@@ -48,7 +48,7 @@ namespace MyTwitchBot.Ads
                     {
                         // Alert chat and open the vote
                         await context.IrcClient.SendMessageAsync(context.ChannelName,
-                            $"⚠️ Ad in ~{(int)secondsUntilAd}s! " +
+                            $"Ad in ~{(int)secondsUntilAd}s! " +
                             $"Type !skipAd to vote to snooze it! ({snoozeCount} snooze(s) remaining)");
 
                         _voteManager.OpenVote();
@@ -59,7 +59,7 @@ namespace MyTwitchBot.Ads
                     else
                     {
                         await context.IrcClient.SendMessageAsync(context.ChannelName,
-                            $"⚠️ Ad in ~{(int)secondsUntilAd}s! No snoozes remaining.");
+                            $"Ad in ~{(int)secondsUntilAd}s! No snoozes remaining.");
                     }
                 }
 

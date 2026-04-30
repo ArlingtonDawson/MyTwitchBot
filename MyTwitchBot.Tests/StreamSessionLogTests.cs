@@ -86,5 +86,50 @@ namespace MyTwitchBot.Tests
             log.AddFollower("ViewerOne");
             Assert.Empty(log.NewSubscribers);
         }
+
+        [Fact]
+        public void BanUser_RemovesFromFollowers()
+        {
+            var log = new StreamSessionLog();
+            log.AddFollower("spambot");
+            log.BanUser("spambot");
+            Assert.DoesNotContain("spambot", log.NewFollowers);
+        }
+
+        [Fact]
+        public void BanUser_RemovesFromSubscribers()
+        {
+            var log = new StreamSessionLog();
+            log.AddSubscriber("spambot");
+            log.BanUser("spambot");
+            Assert.DoesNotContain("spambot", log.NewSubscribers);
+        }
+
+        [Fact]
+        public void BanUser_RemovesFromGifters()
+        {
+            var log = new StreamSessionLog();
+            log.AddGifter("spambot", 5);
+            log.BanUser("spambot");
+            Assert.DoesNotContain("spambot", log.Gifters.Keys);
+        }
+
+        [Fact]
+        public void BanUser_IsCaseInsensitive()
+        {
+            var log = new StreamSessionLog();
+            log.AddFollower("SpamBot");
+            log.BanUser("spambot");
+            Assert.DoesNotContain("SpamBot", log.NewFollowers);
+        }
+
+        [Fact]
+        public void AddFollower_IgnoresBannedUser()
+        {
+            var log = new StreamSessionLog();
+            log.BanUser("spambot");
+            log.AddFollower("spambot");
+            Assert.Empty(log.NewFollowers);
+        }
     }
 }

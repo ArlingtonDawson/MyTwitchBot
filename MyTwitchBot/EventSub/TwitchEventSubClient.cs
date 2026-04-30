@@ -107,6 +107,11 @@ namespace MyTwitchBot.EventSub
                     _sessionLog.AddGifter(gifter, giftCount);
                     Console.WriteLine($"Gift sub: {gifter} x{giftCount}");
                     break;
+                case "channel.ban":
+                    var bannedUser = eventData.GetProperty("user_name").GetString();
+                    _sessionLog.BanUser(bannedUser);
+                    Console.WriteLine($"Banned user removed from credits: {bannedUser}");
+                    break;
             }
         }
     }
