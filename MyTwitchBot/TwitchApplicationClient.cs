@@ -43,6 +43,12 @@ namespace MyTwitchBot
                 new { broadcaster_user_id = _broadcasterId });
         }
 
+        public async Task SubscribeToBansAsync(string sessionId)
+        {
+            await SubscribeAsync("channel.ban", "1", sessionId,
+                new { broadcaster_user_id = _broadcasterId });
+        }
+
         private async Task SubscribeAsync(string type, string version, string sessionId, object condition)
         {
             using var http = await CreateTwitchClient();
