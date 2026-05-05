@@ -28,6 +28,13 @@ async function loadCredits() {
                 `<div class="name">${name}</div>`).join(''));
     }
 
+    // Returning Viewers section
+    if (data.returningViewers.length > 0) {
+        html += buildSection('👀', 'Thanks For Chatting',
+            data.returningViewers.map(name =>
+                `<div class="name">${name}</div>`).join(''));
+    }
+
     html += `
         <div class="divider"></div>
         <div class="stream-end">THANKS FOR WATCHING</div>`;

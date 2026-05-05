@@ -165,7 +165,40 @@ namespace MyTwitchBot
 
             return null;
         }
+        public async Task<string> GetUserIdAsync(string username)
+        {
+            using var http = await CreateTwitchClient();
+            var response = await http.GetAsync(
+                $"https://api.twitch.tv/helix/users?login={username}");
 
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+
+            var data = doc.RootElement.GetProperty("data");
+            if (data.GetArrayLength() == 0) return string.Empty;
+
+            return data[0].GetProperty("id").GetString();
+        }
+
+        public async Task<bool> IsFollowerAsync(string username)
+        {
+            var userId = await GetUserIdAsync(username);
+            if (string.IsNullOrEmpty(userId)) return false;
+
+            using var http = await CreateTwitchClient();
+            var response = await http.GetAsync(
+                $"https://api.twitch.tv/helix/channels/followers" +
+                $"?broadcaster_id={_broadcasterId}&user_id={userId}");
+
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+
+            return doc.RootElement.GetProperty("total").GetInt32() > 0;
+        }
         public int ReadInt(JsonElement element, string propertyName)
         {
             var prop = element.GetProperty(propertyName);
