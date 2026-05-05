@@ -17,6 +17,7 @@ namespace MyTwitchBot
         private readonly AdMonitor _adMonitor;
         private readonly TwitchEventSubClient _eventSubClient;
         private readonly ChatContext _context;
+        private readonly FollowerTracker _followerTracker;
         private readonly string _channelName;
         private readonly string _oauthToken;
 
@@ -26,6 +27,7 @@ namespace MyTwitchBot
             AdMonitor adMonitor,
             TwitchEventSubClient eventSubClient,
             ChatContext context,
+            FollowerTracker followerTracker,
             string channelName,
             string oauthToken)
         {
@@ -36,6 +38,7 @@ namespace MyTwitchBot
             _context = context;
             _channelName = channelName;
             _oauthToken = oauthToken;
+            _followerTracker = followerTracker;
         }
 
 
@@ -57,6 +60,7 @@ namespace MyTwitchBot
             var sessionLog = new StreamSessionLog();
             var scrollGenerator = new ScrollGenerator();
             var eventSubClient = new TwitchEventSubClient(appClient, sessionLog);
+            var followerTracker = new FollowerTracker(appClient, sessionLog);
 
             var dispatcher = new ChatCommandDispatcher();
             dispatcher.Register(new WinCommand());
@@ -83,6 +87,7 @@ namespace MyTwitchBot
                 adMonitor,
                 eventSubClient,
                 context,
+                followerTracker,
                 config["Twitch:Channel"],
                 config["Twitch:OAuthToken"]);
         }
@@ -120,6 +125,8 @@ namespace MyTwitchBot
                     _context.Username = TwitchIrcMessageParser.GetUsername(messageBody);
                     string chatMessage = TwitchIrcMessageParser.GetMessageText(messageBody);
                     bool isMod = TwitchIrcMessageParser.IsModerator(message);
+
+                    await _followerTracker.CheckAndTrackAsync(_context.Username);
 
                     await _dispatcher.DispatchAsync(chatMessage, isMod, _context);
                 }

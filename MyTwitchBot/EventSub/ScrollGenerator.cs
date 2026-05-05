@@ -26,7 +26,8 @@ namespace MyTwitchBot.EventSub
                 gifters = log.Gifters
                     .OrderByDescending(g => g.Value)
                     .Select(g => new { username = g.Key, count = g.Value }),
-                followers = log.NewFollowers
+                followers = log.NewFollowers,
+                returningViewers = log.ReturningViewers
             };
 
             var json = JsonSerializer.Serialize(data, new JsonSerializerOptions

@@ -77,6 +77,7 @@ namespace MyTwitchBot.Tests
             Assert.Empty(log.NewFollowers);
             Assert.Empty(log.NewSubscribers);
             Assert.Empty(log.Gifters);
+            Assert.Empty(log.ReturningViewers);
         }
 
         [Fact]
@@ -130,6 +131,43 @@ namespace MyTwitchBot.Tests
             log.BanUser("spambot");
             log.AddFollower("spambot");
             Assert.Empty(log.NewFollowers);
+        }
+
+        // Returning Viewers
+        [Fact]
+        public void AddReturningViewer_AddsToList()
+        {
+            var log = new StreamSessionLog();
+            log.AddReturningViewer("RegularViewer");
+            Assert.Contains("RegularViewer", log.ReturningViewers);
+        }
+
+        [Fact]
+        public void AddReturningViewer_Deduplicates()
+        {
+            var log = new StreamSessionLog();
+            log.AddReturningViewer("RegularViewer");
+            log.AddReturningViewer("RegularViewer");
+            Assert.Single(log.ReturningViewers);
+        }
+
+        [Fact]
+        public void AddReturningViewer_IsCaseInsensitive()
+        {
+            var log = new StreamSessionLog();
+            log.AddReturningViewer("RegularViewer");
+            log.AddReturningViewer("regularviewer");
+            Assert.Single(log.ReturningViewers);
+        }
+
+        [Fact]
+        public void AddReturningViewer_DoesNotAdd_IfAlreadyNewFollower()
+        {
+            var log = new StreamSessionLog();
+            log.AddFollower("NewFan");
+            log.AddReturningViewer("NewFan");
+            Assert.Empty(log.ReturningViewers);
+            Assert.Single(log.NewFollowers);
         }
     }
 }
