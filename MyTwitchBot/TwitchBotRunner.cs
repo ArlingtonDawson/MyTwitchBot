@@ -76,8 +76,7 @@ namespace MyTwitchBot
 
             var sessionLog = new StreamSessionLog();
             var scrollGenerator = new ScrollGenerator();
-            
-            var eventSubClient = new TwitchEventSubClient(appClient, sessionLog);
+
             var followerTracker = new FollowerTracker(appClient, sessionLog);
 
             var dispatcher = new ChatCommandDispatcher();
@@ -103,7 +102,7 @@ namespace MyTwitchBot
                 StreakKeeper = new StreakKeeper(),
                 BackupStreakKeeper = new StreakKeeper()
             };
-            
+
             var eventSubClient = new TwitchEventSubClient(
                 appClient,
                 sessionLog,
@@ -143,21 +142,6 @@ namespace MyTwitchBot
                 _loggerFactory.Dispose();
             return ValueTask.CompletedTask;
 
-                if (message.Contains("PING"))
-                    await _ircClient.PongAsync();
-
-                if (message.Contains("PRIVMSG"))
-                {
-                    string messageBody = message.Substring(message.IndexOf(':'));
-                    _context.Username = TwitchIrcMessageParser.GetUsername(messageBody);
-                    string chatMessage = TwitchIrcMessageParser.GetMessageText(messageBody);
-                    bool isMod = TwitchIrcMessageParser.IsModerator(message);
-
-                    await _followerTracker.CheckAndTrackAsync(_context.Username);
-
-                    await _dispatcher.DispatchAsync(chatMessage, isMod, _context);
-                }
-            }
         }
     }
 }
