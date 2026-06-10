@@ -29,45 +29,50 @@ namespace MyTwitchBot.Ads
         {
             while (!ct.IsCancellationRequested)
             {
-                await Task.Delay(30_000, ct); // poll every 30 seconds
-
-                var nextAd = await _appClient.GetNextAdTime();
-                if (nextAd == null) continue;
-
-                var secondsUntilAd = (nextAd.Value - DateTimeOffset.UtcNow).TotalSeconds;
-                if (secondsUntilAd < 0) continue;
-
-                if (secondsUntilAd <= _warningSeconds && !_warningFired)
+                try
                 {
-                    _warningFired = true;
-                    _votingHappened = false;
+                    await Task.Delay(30_000, ct); // poll every 30 seconds
 
-                    var snoozeCount = await _appClient.GetAdSnoozeCount();
+                    var nextAd = await _appClient.GetNextAdTime();
+                    if (nextAd == null) continue;
 
-                    if (snoozeCount > 0)
+                    var secondsUntilAd = (nextAd.Value - DateTimeOffset.UtcNow).TotalSeconds;
+                    if (secondsUntilAd < 0) continue;
+
+                    if (secondsUntilAd <= _warningSeconds && !_warningFired)
                     {
-                        // Alert chat and open the vote
-                        await context.IrcClient.SendMessageAsync(context.ChannelName,
-                            $"Ad in ~{(int)secondsUntilAd}s! " +
-                            $"Type !skipAd to vote to snooze it! ({snoozeCount} snooze(s) remaining)");
+                        _warningFired = true;
+                        _votingHappened = false;
 
-                        _voteManager.OpenVote();
+                        var snoozeCount = await _appClient.GetAdSnoozeCount();
 
-                        // Start the voting window in the background
-                        _ = RunVotingWindowAsync(context, ct);
+                        if (snoozeCount > 0)
+                        {
+                            // Alert chat and open the vote
+                            await context.AppClient.SendChatMessageAsync($"Ad in ~{(int)secondsUntilAd}s! " +
+                                $"Type !skipAd to vote to snooze it! ({snoozeCount} snooze(s) remaining)");
+
+                            _voteManager.OpenVote();
+
+                            // Start the voting window in the background
+                            _ = RunVotingWindowAsync(context, ct);
+                        }
+                        else
+                        {
+                            await context.AppClient.SendChatMessageAsync($"Ad in ~{(int)secondsUntilAd}s! No snoozes remaining.");
+                        }
                     }
-                    else
+
+                    // Reset warning flag after ad has passed
+                    if (_votingHappened == true && secondsUntilAd > _warningSeconds)
                     {
-                        await context.IrcClient.SendMessageAsync(context.ChannelName,
-                            $"Ad in ~{(int)secondsUntilAd}s! No snoozes remaining.");
+                        _warningFired = false;
+                        _votingHappened = false;
                     }
                 }
-
-                // Reset warning flag after ad has passed
-                if (_votingHappened == true && secondsUntilAd > _warningSeconds)
+                catch (Exception ex)
                 {
-                    _warningFired = false;
-                    _votingHappened = false;
+                    Console.Write($"!!AdMonitor Call Failed: {ex.Message}");
                 }
             }
         }
@@ -86,14 +91,12 @@ namespace MyTwitchBot.Ads
             if (_voteManager.VoteCount >= threshold)
             {
                 var remaining = await _appClient.SnoozeNextAd();
-                await context.IrcClient.SendMessageAsync(context.ChannelName,
-                    $"✅ Vote passed ({_voteManager.VoteCount}/{viewers} viewers)! " +
+                await context.AppClient.SendChatMessageAsync($"✅ Vote passed ({_voteManager.VoteCount}/{viewers} viewers)! " +
                     $"Ad snoozed. Snoozes remaining: {remaining}");
             }
             else
             {
-                await context.IrcClient.SendMessageAsync(context.ChannelName,
-                    $"❌ Vote failed ({_voteManager.VoteCount}/{viewers} viewers voted). Ad will play.");
+                await context.AppClient.SendChatMessageAsync($"❌ Vote failed ({_voteManager.VoteCount}/{viewers} viewers voted). Ad will play.");
             }
 
             _votingHappened = true;

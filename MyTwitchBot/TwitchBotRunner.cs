@@ -1,18 +1,23 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using MyTwitchBot.Ads;
 using MyTwitchBot.Commands;
 using MyTwitchBot.EventSub;
+using MyTwitchBot.Quotes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
+using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace MyTwitchBot
 {
-    public class TwitchBotRunner
+    public class TwitchBotRunner : IAsyncDisposable
     {
-        private readonly TwitchIrcClient _ircClient;
+        private readonly ILogger<TwitchBotRunner> _logger;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly ChatCommandDispatcher _dispatcher;
         private readonly AdMonitor _adMonitor;
         private readonly TwitchEventSubClient _eventSubClient;
@@ -22,7 +27,7 @@ namespace MyTwitchBot
         private readonly string _oauthToken;
 
         private TwitchBotRunner(
-            TwitchIrcClient ircClient,
+            ILoggerFactory loggerFactory,
             ChatCommandDispatcher dispatcher,
             AdMonitor adMonitor,
             TwitchEventSubClient eventSubClient,
@@ -31,7 +36,7 @@ namespace MyTwitchBot
             string channelName,
             string oauthToken)
         {
-            _ircClient = ircClient;
+            _loggerFactory = loggerFactory;
             _dispatcher = dispatcher;
             _adMonitor = adMonitor;
             _eventSubClient = eventSubClient;
@@ -39,50 +44,79 @@ namespace MyTwitchBot
             _channelName = channelName;
             _oauthToken = oauthToken;
             _followerTracker = followerTracker;
+
+            ILogger<TwitchBotRunner> _logger = _loggerFactory.CreateLogger<TwitchBotRunner>();
         }
 
 
-        public static TwitchBotRunner Create()
+        public static async Task<TwitchBotRunner> CreateAsync()
         {
             var config = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json", optional: true)
                 .AddUserSecrets<TwitchBotRunner>()
                 .Build();
 
+            var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder
+                    .SetMinimumLevel(LogLevel.Debug)
+                    .AddConsole()
+                    .AddFile("logs/twitchbot-{Date}.txt");
+            });
+
             var twitchOAuth = new TwitchOAuth(
                 config["Twitch:AppClientID"],
-                config["Twitch:AppSecret"]);
+                config["Twitch:AppSecret"],
+                config["Twitch:OAuthCallbackPort"] ?? string.Empty);
 
-            var appClient = new TwitchApplicationClient(twitchOAuth, config["Twitch:BroadcasterId"]);
+            var appClient = new TwitchApplicationClient(twitchOAuth, config["Twitch:BroadcasterId"], !string.IsNullOrEmpty(config["Twitch:BotID"]) ? config["Twitch:BotID"] : null);
 
             var voteManager = new AdVoteManager();
             var adMonitor = new AdMonitor(appClient, voteManager);
 
             var sessionLog = new StreamSessionLog();
             var scrollGenerator = new ScrollGenerator();
-            var eventSubClient = new TwitchEventSubClient(appClient, sessionLog);
+            
             var followerTracker = new FollowerTracker(appClient, sessionLog);
 
             var dispatcher = new ChatCommandDispatcher();
+
+            var quoteRepository = new QuoteRepository();
+            await quoteRepository.LoadAsync();
+
             dispatcher.Register(new WinCommand());
             dispatcher.Register(new LoseCommand());
             dispatcher.Register(new UndoWinCommand());
             dispatcher.Register(new UndoLoseCommand());
             dispatcher.Register(new SkipAdCommand(voteManager));
             dispatcher.Register(new EndStreamCommand(sessionLog, scrollGenerator));
-
-            var ircClient = new TwitchIrcClient();
+            dispatcher.Register(new QuoteAddCommand(quoteRepository));
+            dispatcher.Register(new QuoteCommand(quoteRepository));
+            dispatcher.Register(new QuoteSearchCommand(quoteRepository));
 
             var context = new ChatContext
             {
-                IrcClient = ircClient,
+                AppClient = appClient,
                 ChannelName = config["Twitch:Channel"],
                 Username = config["Twitch:Username"],
                 StreakKeeper = new StreakKeeper(),
                 BackupStreakKeeper = new StreakKeeper()
             };
+            
+            var eventSubClient = new TwitchEventSubClient(
+                appClient,
+                sessionLog,
+                async (username, isMod, message) =>
+                {
+                    Console.WriteLine($"DEBUG: user={username} mod={isMod} msg={message}");
+                    context.Username = username;
+                    context.LastMessage = message;
+                    await followerTracker.CheckAndTrackAsync(username);
+                    await dispatcher.DispatchAsync(message, isMod, context);
+                });
 
             return new TwitchBotRunner(
-                ircClient,
+                loggerFactory,
                 dispatcher,
                 adMonitor,
                 eventSubClient,
@@ -94,43 +128,20 @@ namespace MyTwitchBot
 
         public async Task RunAsync()
         {
-            await _ircClient.ConnectAsync(
-                _context.Username,
-                _oauthToken,
-                _channelName);
-
             using var cts = new CancellationTokenSource();
 
             await Task.WhenAll(
-                RunChatLoopAsync(cts.Token),
                 _adMonitor.StartAsync(_context, cts.Token),
                 _eventSubClient.StartAsync(cts.Token));
         }
 
-        private async Task RunChatLoopAsync(CancellationToken ct)
+        public ValueTask DisposeAsync()
         {
-            while (!ct.IsCancellationRequested)
-            {
-                string message = await _ircClient.ReadMessageAsync();
-                if (message == null) break;
 
-                Console.WriteLine(message);
+            if (_loggerFactory != null)
+                _loggerFactory.Dispose();
+            return ValueTask.CompletedTask;
 
-                if (message.Contains("PING"))
-                    await _ircClient.PongAsync();
-
-                if (message.Contains("PRIVMSG"))
-                {
-                    string messageBody = message.Substring(message.IndexOf(':'));
-                    _context.Username = TwitchIrcMessageParser.GetUsername(messageBody);
-                    string chatMessage = TwitchIrcMessageParser.GetMessageText(messageBody);
-                    bool isMod = TwitchIrcMessageParser.IsModerator(message);
-
-                    await _followerTracker.CheckAndTrackAsync(_context.Username);
-
-                    await _dispatcher.DispatchAsync(chatMessage, isMod, _context);
-                }
-            }
         }
     }
 }

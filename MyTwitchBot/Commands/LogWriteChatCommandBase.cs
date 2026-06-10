@@ -14,7 +14,7 @@ namespace MyTwitchBot.Commands
 
         protected void LogToFile(ChatContext context)
         {
-            string logEntry = $"{context.StreakKeeper.GetScoreLine}";
+            string logEntry = $"{context.StreakKeeper.GetScoreLine()}";
             File.WriteAllText("winslosses.log", logEntry + Environment.NewLine);
         }
     }

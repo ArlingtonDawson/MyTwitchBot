@@ -11,9 +11,13 @@ secrets.json
 *.suo
 
 # Logs and generated files
+logs/
 *.log
 endstream.json
 
 # OS
 .DS_Store
 Thumbs.db
+
+#MISC
+quotes.json

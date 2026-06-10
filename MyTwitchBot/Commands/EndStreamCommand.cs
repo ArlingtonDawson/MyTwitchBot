@@ -23,14 +23,12 @@ namespace MyTwitchBot.Commands
 
         public async Task ExecuteAsync(ChatContext context)
         {
-            await context.IrcClient.SendMessageAsync(
-                context.ChannelName,
+            await context.AppClient.SendChatMessageAsync(
                 "Thanks for watching! Generating end stream credits...");
 
             await _scrollGenerator.GenerateAsync(_sessionLog);
 
-            await context.IrcClient.SendMessageAsync(
-                context.ChannelName,
+            await context.AppClient.SendChatMessageAsync(
                 $"Credits generated! {_sessionLog.NewFollowers.Count} followers, " +
                 $"{_sessionLog.NewSubscribers.Count} subscribers, " +
                 $"{_sessionLog.Gifters.Count} gifters. See you next time! 👋");
