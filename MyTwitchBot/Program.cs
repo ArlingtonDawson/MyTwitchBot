@@ -11,7 +11,7 @@ internal class Program
 {        
     private static async Task Main(string[] args)
     {
-        var bot = TwitchBotRunner.Create();
+        await using var bot = await TwitchBotRunner.CreateAsync();
         await bot.RunAsync();
     }
 }

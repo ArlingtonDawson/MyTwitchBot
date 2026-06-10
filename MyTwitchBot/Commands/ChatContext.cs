@@ -8,9 +8,10 @@ namespace MyTwitchBot.Commands
 {
     public class ChatContext
     {
-        public TwitchIrcClient IrcClient { get; set; }
+        public TwitchApplicationClient AppClient { get; set; }
         public string ChannelName { get; set; }
         public string Username { get; set; }
+        public string LastMessage { get; set; }
         public StreakKeeper StreakKeeper { get; set; }
         public StreakKeeper BackupStreakKeeper { get; set; }
     }

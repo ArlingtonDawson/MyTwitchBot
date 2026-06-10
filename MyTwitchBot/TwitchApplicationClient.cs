@@ -8,14 +8,18 @@ namespace MyTwitchBot
     {
         private TwitchOAuth _twitchOAuth;
         private string _broadcasterId = "";
-        public TwitchApplicationClient(TwitchOAuth twitchOAuth, string broadcasterId)
+        private string? _botId;
+        public TwitchApplicationClient(TwitchOAuth twitchOAuth, string broadcasterId, string? botId)
         { 
             _twitchOAuth = twitchOAuth;
             _broadcasterId = broadcasterId;
+            _botId = botId;
             
         }
         private async Task<HttpClient> CreateTwitchClient()
         {
+            Console.WriteLine("HandleWelcomeAsync started");
+
             var http = new HttpClient();
 
             http.DefaultRequestHeaders.Authorization =
@@ -24,6 +28,45 @@ namespace MyTwitchBot
             http.DefaultRequestHeaders.Add("Client-Id", _twitchOAuth.ClientId);
 
             return http;
+        }
+
+        public async Task SendChatMessageAsync(string message)
+        {
+            try
+            {
+
+                using var http = await CreateTwitchClient();
+
+                var body = JsonSerializer.Serialize(new
+                {
+                    broadcaster_id = _broadcasterId,
+                    sender_id = _botId??_broadcasterId,
+                    message
+                });
+
+                var response = await http.PostAsync(
+                    "https://api.twitch.tv/helix/chat/messages",
+                    new StringContent(body, Encoding.UTF8, "application/json"));
+
+                response.EnsureSuccessStatusCode();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"!!!! FAILED: {message}");
+                Console.WriteLine($"!!!! ERROR: {ex.Message}");
+                Console.WriteLine($"!!!! INNER: {ex.InnerException?.Message}");
+            }
+
+        }
+
+        public async Task SubscribeToChatMessagesAsync(string sessionId)
+        {
+            await SubscribeAsync("channel.chat.message", "1", sessionId,
+                new
+                {
+                    broadcaster_user_id = _broadcasterId,
+                    user_id = _broadcasterId
+                });
         }
 
         public async Task SubscribeToFollowsAsync(string sessionId)
@@ -46,31 +89,44 @@ namespace MyTwitchBot
         public async Task SubscribeToBansAsync(string sessionId)
         {
             await SubscribeAsync("channel.ban", "1", sessionId,
-                new { broadcaster_user_id = _broadcasterId });
+                new
+                {
+                    broadcaster_user_id = _broadcasterId,
+                    moderator_user_id = _broadcasterId  // ← add this
+                });
         }
 
         private async Task SubscribeAsync(string type, string version, string sessionId, object condition)
         {
-            using var http = await CreateTwitchClient();
-
-            var body = JsonSerializer.Serialize(new
+            try
             {
-                type,
-                version,
-                condition,
-                transport = new
+                using var http = await CreateTwitchClient();
+
+                var body = JsonSerializer.Serialize(new
                 {
-                    method = "websocket",
-                    session_id = sessionId
-                }
-            });
+                    type,
+                    version,
+                    condition,
+                    transport = new
+                    {
+                        method = "websocket",
+                        session_id = sessionId
+                    }
+                });
 
-            var response = await http.PostAsync(
-                "https://api.twitch.tv/helix/eventsub/subscriptions",
-                new StringContent(body, Encoding.UTF8, "application/json"));
+                var response = await http.PostAsync(
+                    "https://api.twitch.tv/helix/eventsub/subscriptions",
+                    new StringContent(body, Encoding.UTF8, "application/json"));
 
-            response.EnsureSuccessStatusCode();
-            Console.WriteLine($"Subscribed to {type}");
+                response.EnsureSuccessStatusCode();
+                Console.WriteLine($"Subscribed to {type}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"!!!! FAILED: {type}");
+                Console.WriteLine($"!!!! ERROR: {ex.Message}");
+                Console.WriteLine($"!!!! INNER: {ex.InnerException?.Message}");
+            }
         }
 
         public async Task<string> GetBroadcasterId(string username)

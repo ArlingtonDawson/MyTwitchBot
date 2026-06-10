@@ -15,11 +15,13 @@ namespace MyTwitchBot.EventSub
         private readonly TwitchApplicationClient _appClient;
         private readonly StreamSessionLog _sessionLog;
         private readonly ClientWebSocket _webSocket = new();
+        private readonly Func<string, bool, string, Task> _onChatMessage; // username, isMod
 
-        public TwitchEventSubClient(TwitchApplicationClient appClient, StreamSessionLog sessionLog)
+        public TwitchEventSubClient(TwitchApplicationClient appClient, StreamSessionLog sessionLog, Func<string, bool, string, Task> onChatMessage)
         {
             _appClient = appClient;
             _sessionLog = sessionLog;
+            _onChatMessage = onChatMessage;
         }
 
         public async Task StartAsync(CancellationToken ct)
@@ -76,9 +78,11 @@ namespace MyTwitchBot.EventSub
             await _appClient.SubscribeToFollowsAsync(sessionId);
             await _appClient.SubscribeToSubscriptionsAsync(sessionId);
             await _appClient.SubscribeToGiftSubscriptionsAsync(sessionId);
+            await _appClient.SubscribeToBansAsync(sessionId);
+            await _appClient.SubscribeToChatMessagesAsync(sessionId);
         }
 
-        private void HandleNotification(JsonDocument doc)
+        private async Task HandleNotification(JsonDocument doc)
         {
             var subscriptionType = doc.RootElement
                 .GetProperty("metadata")
@@ -89,6 +93,21 @@ namespace MyTwitchBot.EventSub
 
             switch (subscriptionType)
             {
+                case "channel.chat.message":
+                    var username = eventData
+                        .GetProperty("chatter_user_name").GetString();
+                    var badges = eventData
+                        .GetProperty("badges").EnumerateArray();
+                    bool isMod = badges.Any(b =>
+                    {
+                        var setId = b.GetProperty("set_id").GetString();
+                        return setId == "moderator" || setId == "broadcaster";
+                    });
+                    var messageText = eventData
+                        .GetProperty("message")
+                        .GetProperty("text").GetString();
+                    await _onChatMessage(username, isMod, messageText);
+                    break;
                 case "channel.follow":
                     var follower = eventData.GetProperty("user_name").GetString();
                     _sessionLog.AddFollower(follower);

@@ -12,17 +12,21 @@ namespace MyTwitchBot
 {
     public class TwitchOAuth
     {
-        private const string RedirectUri = "http://localhost/";
+        private readonly string _redirectUri;
         private const string TokenFile = "twitch_tokens.json";
 
         public string ClientId { get { return _clientId; }}
         private readonly string _clientId;
         private readonly string _clientSecret;
 
-        public TwitchOAuth(string clientId, string clientSecret)
+        public TwitchOAuth(string clientId, string clientSecret, string callbackPort = "")
         {
             _clientId = clientId;
             _clientSecret = clientSecret;
+            if (!string.IsNullOrEmpty(callbackPort))
+                _redirectUri = $"http://localhost:{callbackPort}/";
+            else
+                _redirectUri = "http://localhost/";
         }
 
         public async Task<string> GetAccessTokenAsync()
@@ -51,18 +55,21 @@ namespace MyTwitchBot
         private async Task<string> LoginAsync()
         {
             var state = Guid.NewGuid().ToString("N");
-            var scopes = HttpUtility.UrlEncode("channel:read:ads channel:manage:ads moderator:read:followers");
+            var scopes = HttpUtility.UrlEncode(
+                    "channel:read:ads channel:manage:ads channel:moderate " +
+                    "moderator:read:followers channel:read:subscriptions " +
+                    "moderator:read:banned_users user:bot channel:bot user:read:chat user:write:chat");
 
             var authUrl =
                 "https://id.twitch.tv/oauth2/authorize" +
                 $"?client_id={_clientId}" +
-                $"&redirect_uri={HttpUtility.UrlEncode(RedirectUri)}" +
+                $"&redirect_uri={HttpUtility.UrlEncode(_redirectUri)}" +
                 $"&response_type=code" +
                 $"&scope={scopes}" +
                 $"&state={state}";
 
             using var listener = new HttpListener();
-            listener.Prefixes.Add(RedirectUri);
+            listener.Prefixes.Add(_redirectUri);
             listener.Start();
 
             Process.Start(new ProcessStartInfo
@@ -103,7 +110,7 @@ namespace MyTwitchBot
                 ["client_secret"] = _clientSecret,
                 ["code"] = code,
                 ["grant_type"] = "authorization_code",
-                ["redirect_uri"] = RedirectUri
+                ["redirect_uri"] = _redirectUri
             };
 
             var response = await http.PostAsync(
