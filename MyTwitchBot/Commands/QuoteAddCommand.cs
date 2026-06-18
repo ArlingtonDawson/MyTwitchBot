@@ -21,7 +21,7 @@ namespace MyTwitchBot.Commands
 
         public async Task ExecuteAsync(ChatContext context)
         {
-            // Expected format: !quoteadd "quote text" - person 2026-06-01
+
             var input = context.LastMessage?.Substring(CommandText.Length).Trim();
 
             if (string.IsNullOrWhiteSpace(input))

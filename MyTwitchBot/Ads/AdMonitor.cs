@@ -9,14 +9,14 @@ namespace MyTwitchBot.Ads
 {
     public class AdMonitor
     {
-        private readonly TwitchApplicationClient _appClient;
+        private readonly ITwitchApplicationClient _appClient;
         private readonly AdVoteManager _voteManager;
         private readonly int _warningSeconds;
         private readonly int _votingWindowSeconds;
         private bool _warningFired = false;
         private bool _votingHappened = false;
 
-        public AdMonitor(TwitchApplicationClient appClient, AdVoteManager voteManager,
+        public AdMonitor(ITwitchApplicationClient appClient, AdVoteManager voteManager,
     int warningSeconds = 120, int votingWindowSeconds = 60)
         {
             _appClient = appClient;

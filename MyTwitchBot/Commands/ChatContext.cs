@@ -8,7 +8,7 @@ namespace MyTwitchBot.Commands
 {
     public class ChatContext
     {
-        public TwitchApplicationClient AppClient { get; set; }
+        public ITwitchApplicationClient AppClient { get; set; }
         public string ChannelName { get; set; }
         public string Username { get; set; }
         public string LastMessage { get; set; }

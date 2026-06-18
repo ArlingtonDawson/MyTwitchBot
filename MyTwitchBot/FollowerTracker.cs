@@ -9,11 +9,11 @@ namespace MyTwitchBot
 {
     public class FollowerTracker
     {
-        private readonly TwitchApplicationClient _appClient;
+        private readonly ITwitchApplicationClient _appClient;
         private readonly StreamSessionLog _sessionLog;
         private readonly HashSet<string> _checkedUsers = new();
 
-        public FollowerTracker(TwitchApplicationClient appClient,
+        public FollowerTracker(ITwitchApplicationClient appClient,
             StreamSessionLog sessionLog)
         {
             _appClient = appClient;
