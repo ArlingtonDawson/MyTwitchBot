@@ -12,12 +12,12 @@ namespace MyTwitchBot.EventSub
     {
         private const string EventSubUrl = "wss://eventsub.wss.twitch.tv/ws";
 
-        private readonly TwitchApplicationClient _appClient;
+        private readonly ITwitchApplicationClient _appClient;
         private readonly StreamSessionLog _sessionLog;
         private readonly ClientWebSocket _webSocket = new();
         private readonly Func<string, bool, string, Task> _onChatMessage; // username, isMod
 
-        public TwitchEventSubClient(TwitchApplicationClient appClient, StreamSessionLog sessionLog, Func<string, bool, string, Task> onChatMessage)
+        public TwitchEventSubClient(ITwitchApplicationClient appClient, StreamSessionLog sessionLog, Func<string, bool, string, Task> onChatMessage)
         {
             _appClient = appClient;
             _sessionLog = sessionLog;

@@ -56,9 +56,10 @@ namespace MyTwitchBot
         {
             var state = Guid.NewGuid().ToString("N");
             var scopes = HttpUtility.UrlEncode(
-                    "channel:read:ads channel:manage:ads channel:moderate " +
-                    "moderator:read:followers channel:read:subscriptions " +
-                    "moderator:read:banned_users user:bot channel:bot user:read:chat user:write:chat");
+                "channel:read:ads channel:manage:ads channel:moderate " +
+                "moderator:read:followers channel:read:subscriptions " +
+                "moderator:read:banned_users user:bot channel:bot " +
+                "user:read:chat user:write:chat channel:manage:broadcast");
 
             var authUrl =
                 "https://id.twitch.tv/oauth2/authorize" +

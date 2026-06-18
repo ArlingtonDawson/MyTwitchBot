@@ -88,12 +88,13 @@ namespace MyTwitchBot
             dispatcher.Register(new LoseCommand());
             dispatcher.Register(new UndoWinCommand());
             dispatcher.Register(new UndoLoseCommand());
+            dispatcher.Register(new GameCommand());
             dispatcher.Register(new SkipAdCommand(voteManager));
             dispatcher.Register(new EndStreamCommand(sessionLog, scrollGenerator));
             dispatcher.Register(new QuoteAddCommand(quoteRepository));
             dispatcher.Register(new QuoteCommand(quoteRepository));
             dispatcher.Register(new QuoteSearchCommand(quoteRepository));
-
+            
             var context = new ChatContext
             {
                 AppClient = appClient,

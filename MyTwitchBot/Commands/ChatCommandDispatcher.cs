@@ -17,7 +17,9 @@ namespace MyTwitchBot.Commands
 
         public async Task DispatchAsync(string commandText, bool isMod, ChatContext context)
         {
-            if (!_commands.TryGetValue(commandText.ToLower().Trim(), out var command))
+            var parsedText = commandText.Split(' ')[0].ToLower();
+
+            if (!_commands.TryGetValue(parsedText.ToLower().Trim(), out var command))
                 return; // unknown command, ignore
 
             if (command.RequiresMod && !isMod)

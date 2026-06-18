@@ -4,11 +4,12 @@ using System.Text.Json;
 
 namespace MyTwitchBot
 {
-    public class TwitchApplicationClient
+    public class TwitchApplicationClient : ITwitchApplicationClient
     {
         private TwitchOAuth _twitchOAuth;
         private string _broadcasterId = "";
         private string? _botId;
+
         public TwitchApplicationClient(TwitchOAuth twitchOAuth, string broadcasterId, string? botId)
         { 
             _twitchOAuth = twitchOAuth;
@@ -30,7 +31,7 @@ namespace MyTwitchBot
             return http;
         }
 
-        public async Task SendChatMessageAsync(string message)
+        public virtual async Task SendChatMessageAsync(string message)
         {
             try
             {
@@ -59,7 +60,7 @@ namespace MyTwitchBot
 
         }
 
-        public async Task SubscribeToChatMessagesAsync(string sessionId)
+        public virtual async Task SubscribeToChatMessagesAsync(string sessionId)
         {
             await SubscribeAsync("channel.chat.message", "1", sessionId,
                 new
@@ -69,24 +70,24 @@ namespace MyTwitchBot
                 });
         }
 
-        public async Task SubscribeToFollowsAsync(string sessionId)
+        public virtual async Task SubscribeToFollowsAsync(string sessionId)
         {
             await SubscribeAsync("channel.follow", "2", sessionId,
                 new { broadcaster_user_id = _broadcasterId, moderator_user_id = _broadcasterId });
         }
-        public async Task SubscribeToSubscriptionsAsync(string sessionId)
+        public virtual async Task SubscribeToSubscriptionsAsync(string sessionId)
         {
             await SubscribeAsync("channel.subscribe", "1", sessionId,
                 new { broadcaster_user_id = _broadcasterId });
         }
 
-        public async Task SubscribeToGiftSubscriptionsAsync(string sessionId)
+        public virtual async Task SubscribeToGiftSubscriptionsAsync(string sessionId)
         {
             await SubscribeAsync("channel.subscription.gift", "1", sessionId,
                 new { broadcaster_user_id = _broadcasterId });
         }
 
-        public async Task SubscribeToBansAsync(string sessionId)
+        public virtual async Task SubscribeToBansAsync(string sessionId)
         {
             await SubscribeAsync("channel.ban", "1", sessionId,
                 new
@@ -129,7 +130,7 @@ namespace MyTwitchBot
             }
         }
 
-        public async Task<string> GetBroadcasterId(string username)
+        public virtual async Task<string> GetBroadcasterId(string username)
         {
             using var http = await CreateTwitchClient();
 
@@ -145,7 +146,7 @@ namespace MyTwitchBot
             return data[0].GetProperty("id").GetString();
         }
 
-        public async Task<int> GetAdSnoozeCount()
+        public virtual async Task<int> GetAdSnoozeCount()
         {
             using var http = await CreateTwitchClient();
 
@@ -161,7 +162,7 @@ namespace MyTwitchBot
             return ReadInt(data[0], "snooze_count");
         }
 
-        public async Task<int> SnoozeNextAd()
+        public virtual async Task<int> SnoozeNextAd()
         {
             using var http = await CreateTwitchClient();
 
@@ -178,7 +179,7 @@ namespace MyTwitchBot
             return ReadInt(data[0], "snooze_count");
         }
 
-        public async Task<int> GetViewerCount()
+        public virtual async Task<int> GetViewerCount()
         {
             using var http = await CreateTwitchClient();
 
@@ -194,7 +195,7 @@ namespace MyTwitchBot
             return data[0].GetProperty("viewer_count").GetInt32();
         }
 
-        public async Task<DateTimeOffset?> GetNextAdTime()
+        public virtual async Task<DateTimeOffset?> GetNextAdTime()
         {
             using var http = await CreateTwitchClient();
 
@@ -221,7 +222,7 @@ namespace MyTwitchBot
 
             return null;
         }
-        public async Task<string> GetUserIdAsync(string username)
+        public virtual async Task<string> GetUserIdAsync(string username)
         {
             using var http = await CreateTwitchClient();
             var response = await http.GetAsync(
@@ -238,7 +239,7 @@ namespace MyTwitchBot
             return data[0].GetProperty("id").GetString();
         }
 
-        public async Task<bool> IsFollowerAsync(string username)
+        public virtual async Task<bool> IsFollowerAsync(string username)
         {
             var userId = await GetUserIdAsync(username);
             if (string.IsNullOrEmpty(userId)) return false;
@@ -254,6 +255,43 @@ namespace MyTwitchBot
             using var doc = JsonDocument.Parse(json);
 
             return doc.RootElement.GetProperty("total").GetInt32() > 0;
+        }
+
+        public virtual async Task<string?> GetGameIdAsync(string gameName)
+        {
+            using var http = await CreateTwitchClient();
+
+            var response = await http.GetAsync(
+                $"https://api.twitch.tv/helix/games?name={Uri.EscapeDataString(gameName)}");
+
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+
+            var data = doc.RootElement.GetProperty("data");
+            if (data.GetArrayLength() == 0) return null;
+
+            return data[0].GetProperty("id").GetString();
+        }
+
+        public virtual async Task<bool> UpdateChannelGameAsync(string gameId)
+        {
+            using var http = await CreateTwitchClient();
+
+            var body = JsonSerializer.Serialize(new
+            {
+                game_id = gameId
+            });
+
+            var request = new HttpRequestMessage(HttpMethod.Patch,
+                $"https://api.twitch.tv/helix/channels?broadcaster_id={_broadcasterId}")
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json")
+            };
+
+            var response = await http.SendAsync(request);
+            return response.IsSuccessStatusCode;
         }
         public int ReadInt(JsonElement element, string propertyName)
         {
