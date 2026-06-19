@@ -293,6 +293,24 @@ namespace MyTwitchBot
             var response = await http.SendAsync(request);
             return response.IsSuccessStatusCode;
         }
+        public virtual async Task<bool> UpdateChannelTitleAsync(string title)
+        {
+            using var http = await CreateTwitchClient();
+
+            var body = JsonSerializer.Serialize(new
+            {
+                title
+            });
+
+            var request = new HttpRequestMessage(HttpMethod.Patch,
+                $"https://api.twitch.tv/helix/channels?broadcaster_id={_broadcasterId}")
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json")
+            };
+
+            var response = await http.SendAsync(request);
+            return response.IsSuccessStatusCode;
+        }
         public int ReadInt(JsonElement element, string propertyName)
         {
             var prop = element.GetProperty(propertyName);
