@@ -21,5 +21,6 @@ namespace MyTwitchBot
         Task SubscribeToGiftSubscriptionsAsync(string sessionId);
         Task SubscribeToBansAsync(string sessionId);
         Task SubscribeToChatMessagesAsync(string sessionId);
+        Task<bool> UpdateChannelTitleAsync(string title);
     }
 }
