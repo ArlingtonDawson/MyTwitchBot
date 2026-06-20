@@ -70,7 +70,7 @@ namespace MyTwitchBot
                 config["Twitch:OAuthCallbackPort"] ?? string.Empty);
 
             var appClient = new TwitchApplicationClient(twitchOAuth, config["Twitch:BroadcasterId"], !string.IsNullOrEmpty(config["Twitch:BotID"]) ? config["Twitch:BotID"] : null);
-
+            
             var voteManager = new AdVoteManager();
             var adMonitor = new AdMonitor(appClient, voteManager);
 
@@ -89,6 +89,7 @@ namespace MyTwitchBot
             dispatcher.Register(new UndoWinCommand());
             dispatcher.Register(new UndoLoseCommand());
             dispatcher.Register(new GameCommand());
+            dispatcher.Register(new TitleCommand());
             dispatcher.Register(new SkipAdCommand(voteManager));
             dispatcher.Register(new EndStreamCommand(sessionLog, scrollGenerator));
             dispatcher.Register(new QuoteAddCommand(quoteRepository));
