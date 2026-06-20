@@ -93,7 +93,7 @@ namespace MyTwitchBot
                 new
                 {
                     broadcaster_user_id = _broadcasterId,
-                    moderator_user_id = _broadcasterId  // ← add this
+                    moderator_user_id = _broadcasterId 
                 });
         }
 
