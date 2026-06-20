@@ -11,6 +11,8 @@ namespace MyTwitchBot.Commands
     {
         public string CommandText => "!quote";
         public bool RequiresMod => false;
+        public TokenType RequiredToken => TokenType.Broadcaster;
+        public IEnumerable<string> RequiredScopes => Array.Empty<string>();
 
         private readonly QuoteRepository _repository;
 

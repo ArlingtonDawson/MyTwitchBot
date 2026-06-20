@@ -6,28 +6,27 @@ namespace MyTwitchBot
 {
     public class TwitchApplicationClient : ITwitchApplicationClient
     {
-        private TwitchOAuth _twitchOAuth;
+        private readonly TwitchOAuth _broadcasterOAuth;
+        private readonly TwitchOAuth _botOAuth;
         private string _broadcasterId = "";
         private string? _botId;
 
-        public TwitchApplicationClient(TwitchOAuth twitchOAuth, string broadcasterId, string? botId)
-        { 
-            _twitchOAuth = twitchOAuth;
+        public TwitchApplicationClient(TwitchOAuth broadcasterOAuth, TwitchOAuth botOAuth, string broadcasterId, string? botId)
+        {
+            _broadcasterOAuth = broadcasterOAuth;
+            _botOAuth = botOAuth;
             _broadcasterId = broadcasterId;
             _botId = botId;
             
         }
-        private async Task<HttpClient> CreateTwitchClient()
+        private async Task<HttpClient> CreateTwitchClient(TwitchOAuth oauth)
         {
             Console.WriteLine("HandleWelcomeAsync started");
 
             var http = new HttpClient();
-
             http.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", await _twitchOAuth.GetAccessTokenAsync());
-
-            http.DefaultRequestHeaders.Add("Client-Id", _twitchOAuth.ClientId);
-
+                new AuthenticationHeaderValue("Bearer", await oauth.GetAccessTokenAsync());
+            http.DefaultRequestHeaders.Add("Client-Id", oauth.ClientId);
             return http;
         }
 
@@ -36,12 +35,12 @@ namespace MyTwitchBot
             try
             {
 
-                using var http = await CreateTwitchClient();
+                using var http = await CreateTwitchClient(_botOAuth);
 
                 var body = JsonSerializer.Serialize(new
                 {
                     broadcaster_id = _broadcasterId,
-                    sender_id = _botId??_broadcasterId,
+                    sender_id = _botId,
                     message
                 });
 
@@ -66,7 +65,7 @@ namespace MyTwitchBot
                 new
                 {
                     broadcaster_user_id = _broadcasterId,
-                    user_id = _broadcasterId
+                    user_id =  _broadcasterId
                 });
         }
 
@@ -93,7 +92,7 @@ namespace MyTwitchBot
                 new
                 {
                     broadcaster_user_id = _broadcasterId,
-                    moderator_user_id = _broadcasterId 
+                    moderator_user_id = _broadcasterId
                 });
         }
 
@@ -101,7 +100,7 @@ namespace MyTwitchBot
         {
             try
             {
-                using var http = await CreateTwitchClient();
+                using var http = await CreateTwitchClient(_broadcasterOAuth);
 
                 var body = JsonSerializer.Serialize(new
                 {
@@ -132,7 +131,7 @@ namespace MyTwitchBot
 
         public virtual async Task<string> GetBroadcasterId(string username)
         {
-            using var http = await CreateTwitchClient();
+            using var http = await CreateTwitchClient(_broadcasterOAuth);
 
             var json = await http.GetStringAsync(
                 $"https://api.twitch.tv/helix/users?login={username}");
@@ -148,7 +147,7 @@ namespace MyTwitchBot
 
         public virtual async Task<int> GetAdSnoozeCount()
         {
-            using var http = await CreateTwitchClient();
+            using var http = await CreateTwitchClient(_broadcasterOAuth);
 
             var json = await http.GetStringAsync(
                 $"https://api.twitch.tv/helix/channels/ads?broadcaster_id={_broadcasterId}");
@@ -164,7 +163,7 @@ namespace MyTwitchBot
 
         public virtual async Task<int> SnoozeNextAd()
         {
-            using var http = await CreateTwitchClient();
+            using var http = await CreateTwitchClient(_broadcasterOAuth);
 
             var response = await http.PostAsync($"https://api.twitch.tv/helix/channels/ads/schedule/snooze?broadcaster_id={_broadcasterId}",
                                                 content: null);
@@ -181,7 +180,7 @@ namespace MyTwitchBot
 
         public virtual async Task<int> GetViewerCount()
         {
-            using var http = await CreateTwitchClient();
+            using var http = await CreateTwitchClient(_broadcasterOAuth);
 
             var json = await http.GetStringAsync(
                 $"https://api.twitch.tv/helix/streams?user_id={_broadcasterId}");
@@ -197,7 +196,7 @@ namespace MyTwitchBot
 
         public virtual async Task<DateTimeOffset?> GetNextAdTime()
         {
-            using var http = await CreateTwitchClient();
+            using var http = await CreateTwitchClient(_broadcasterOAuth);
 
             var json = await http.GetStringAsync(
                 $"https://api.twitch.tv/helix/channels/ads?broadcaster_id={_broadcasterId}");
@@ -224,7 +223,7 @@ namespace MyTwitchBot
         }
         public virtual async Task<string> GetUserIdAsync(string username)
         {
-            using var http = await CreateTwitchClient();
+            using var http = await CreateTwitchClient(_broadcasterOAuth);
             var response = await http.GetAsync(
                 $"https://api.twitch.tv/helix/users?login={username}");
 
@@ -244,7 +243,7 @@ namespace MyTwitchBot
             var userId = await GetUserIdAsync(username);
             if (string.IsNullOrEmpty(userId)) return false;
 
-            using var http = await CreateTwitchClient();
+            using var http = await CreateTwitchClient(_broadcasterOAuth);
             var response = await http.GetAsync(
                 $"https://api.twitch.tv/helix/channels/followers" +
                 $"?broadcaster_id={_broadcasterId}&user_id={userId}");
@@ -259,7 +258,7 @@ namespace MyTwitchBot
 
         public virtual async Task<string?> GetGameIdAsync(string gameName)
         {
-            using var http = await CreateTwitchClient();
+            using var http = await CreateTwitchClient(_broadcasterOAuth);
 
             var response = await http.GetAsync(
                 $"https://api.twitch.tv/helix/games?name={Uri.EscapeDataString(gameName)}");
@@ -277,7 +276,7 @@ namespace MyTwitchBot
 
         public virtual async Task<bool> UpdateChannelGameAsync(string gameId)
         {
-            using var http = await CreateTwitchClient();
+            using var http = await CreateTwitchClient(_broadcasterOAuth);
 
             var body = JsonSerializer.Serialize(new
             {
@@ -295,7 +294,7 @@ namespace MyTwitchBot
         }
         public virtual async Task<bool> UpdateChannelTitleAsync(string title)
         {
-            using var http = await CreateTwitchClient();
+            using var http = await CreateTwitchClient(_broadcasterOAuth);
 
             var body = JsonSerializer.Serialize(new
             {

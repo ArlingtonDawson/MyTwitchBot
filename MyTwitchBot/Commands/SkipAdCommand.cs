@@ -10,7 +10,9 @@ namespace MyTwitchBot.Commands
     public class SkipAdCommand : IChatCommand
     {
         public string CommandText => "!skipAd";
-        public bool RequiresMod => false; // any viewer can vote
+        public bool RequiresMod => false;
+        public TokenType RequiredToken => TokenType.Broadcaster;
+        public IEnumerable<string> RequiredScopes => new[] { "channel:read:ads", "channel:manage:ads" };
 
         private readonly AdVoteManager _voteManager;
 

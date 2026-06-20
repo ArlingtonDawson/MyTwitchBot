@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MyTwitchBot.Commands
 {
-    public class  UndoWinCommand: LogWriteChatCommandBase
+    public class  UndoWinCommand: ChatCommandBase
     {
         public override string CommandText => "!-win";
 

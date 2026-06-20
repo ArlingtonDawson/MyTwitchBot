@@ -21,3 +21,5 @@ Thumbs.db
 
 #MISC
 quotes.json
+twitch_tokens_broadcaster.json
+twitch_tokens_bot.json
