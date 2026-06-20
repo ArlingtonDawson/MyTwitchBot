@@ -62,6 +62,9 @@ namespace MyTwitchBot.Tests
             public string CommandText { get; }
             public bool RequiresMod { get; }
 
+            public virtual TokenType RequiredToken => TokenType.Broadcaster;
+            public virtual IEnumerable<string> RequiredScopes => Array.Empty<string>();
+
             public TestCommand(string commandText, Action action, bool requiresMod = false)
             {
                 CommandText = commandText;

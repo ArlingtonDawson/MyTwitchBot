@@ -15,15 +15,17 @@ namespace MyTwitchBot.Commands
             _commands[command.CommandText.ToLower()] = command;
         }
 
-        public async Task DispatchAsync(string commandText, bool isMod, ChatContext context)
-        {
-            var parsedText = commandText.Split(' ')[0].ToLower();
+        public IEnumerable<IChatCommand> GetAllCommands() => _commands.Values;
 
-            if (!_commands.TryGetValue(parsedText.ToLower().Trim(), out var command))
-                return; // unknown command, ignore
+        public async Task DispatchAsync(string messageText, bool isMod, ChatContext context)
+        {
+            var commandText = messageText.Split(' ')[0].ToLower();
+
+            if (!_commands.TryGetValue(commandText, out var command))
+                return;
 
             if (command.RequiresMod && !isMod)
-                return; // not authorized
+                return;
 
             await command.ExecuteAsync(context);
         }

@@ -11,6 +11,8 @@ namespace MyTwitchBot.Commands
     {
         public string CommandText => "!game";
         public bool RequiresMod => true;
+        public TokenType RequiredToken => TokenType.Broadcaster;
+        public IEnumerable<string> RequiredScopes => new[] { "channel:manage:broadcast" };
 
         public async Task ExecuteAsync(ChatContext context)
         {

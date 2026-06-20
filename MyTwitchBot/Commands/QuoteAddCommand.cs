@@ -10,7 +10,9 @@ namespace MyTwitchBot.Commands
     public class QuoteAddCommand : IChatCommand
     {
         public string CommandText => "!quoteadd";
-        public bool RequiresMod => false;
+        public bool RequiresMod => true;
+        public TokenType RequiredToken => TokenType.Broadcaster;
+        public IEnumerable<string> RequiredScopes => Array.Empty<string>();
 
         private readonly QuoteRepository _repository;
 

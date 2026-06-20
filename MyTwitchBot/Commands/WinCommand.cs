@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace MyTwitchBot.Commands
 {
-    public class WinCommand : LogWriteChatCommandBase
+    public class WinCommand : ChatCommandBase
     {
         public override string CommandText => "!win";
 

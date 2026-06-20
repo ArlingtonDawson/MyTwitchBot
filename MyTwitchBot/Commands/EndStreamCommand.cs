@@ -11,6 +11,8 @@ namespace MyTwitchBot.Commands
     {
         public string CommandText => "!endstream";
         public bool RequiresMod => true;
+        public TokenType RequiredToken => TokenType.Broadcaster;
+        public IEnumerable<string> RequiredScopes => Array.Empty<string>();
 
         private readonly StreamSessionLog _sessionLog;
         private readonly ScrollGenerator _scrollGenerator;

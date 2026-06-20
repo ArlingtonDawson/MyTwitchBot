@@ -64,20 +64,12 @@ namespace MyTwitchBot
                     .AddFile("logs/twitchbot-{Date}.txt");
             });
 
-            var twitchOAuth = new TwitchOAuth(
-                config["Twitch:AppClientID"],
-                config["Twitch:AppSecret"],
-                config["Twitch:OAuthCallbackPort"] ?? string.Empty);
 
-            var appClient = new TwitchApplicationClient(twitchOAuth, config["Twitch:BroadcasterId"], !string.IsNullOrEmpty(config["Twitch:BotID"]) ? config["Twitch:BotID"] : null);
-            
+           
             var voteManager = new AdVoteManager();
-            var adMonitor = new AdMonitor(appClient, voteManager);
 
             var sessionLog = new StreamSessionLog();
             var scrollGenerator = new ScrollGenerator();
-
-            var followerTracker = new FollowerTracker(appClient, sessionLog);
 
             var dispatcher = new ChatCommandDispatcher();
 
@@ -95,7 +87,45 @@ namespace MyTwitchBot
             dispatcher.Register(new QuoteAddCommand(quoteRepository));
             dispatcher.Register(new QuoteCommand(quoteRepository));
             dispatcher.Register(new QuoteSearchCommand(quoteRepository));
-            
+
+
+            var allCommands = dispatcher.GetAllCommands();
+            var broadcasterScopes = ScopeBuilder.BuildBroadcasterScopes(allCommands);
+
+            var hasBotAccount = !string.IsNullOrWhiteSpace(config["Twitch:BotID"]);
+
+            var broadcasterOAuth = new TwitchOAuth(
+                config["Twitch:AppClientID"],
+                config["Twitch:AppSecret"],
+                broadcasterScopes,
+                "twitch_tokens_broadcaster.json");
+
+            await broadcasterOAuth.GetAccessTokenAsync();
+
+            TwitchOAuth botOAuth;
+            if (hasBotAccount)
+            {
+                var botScopes = ScopeBuilder.BuildBotScopes(allCommands);
+                botOAuth = new TwitchOAuth(
+                    config["Twitch:AppClientID"],
+                    config["Twitch:AppSecret"],
+                    botScopes,
+                    "twitch_tokens_bot.json");
+
+                await botOAuth.GetAccessTokenAsync();
+            }
+            else
+            {
+                botOAuth = broadcasterOAuth;
+            }
+
+            var appClient = new TwitchApplicationClient(
+                broadcasterOAuth, hasBotAccount?botOAuth:broadcasterOAuth,
+                config["Twitch:BroadcasterId"], hasBotAccount?config["Twitch:BotID"]: config["Twitch:BroadcasterId"]);
+
+            var followerTracker = new FollowerTracker(appClient, sessionLog);
+            var adMonitor = new AdMonitor(appClient, voteManager);
+
             var context = new ChatContext
             {
                 AppClient = appClient,
