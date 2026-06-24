@@ -22,9 +22,8 @@ namespace MyTwitchBot
         private readonly AdMonitor _adMonitor;
         private readonly TwitchEventSubClient _eventSubClient;
         private readonly ChatContext _context;
-        private readonly FollowerTracker _followerTracker;
         private readonly string _channelName;
-        private readonly string _oauthToken;
+        private readonly FollowerTracker _followerTracker;
 
         private TwitchBotRunner(
             ILoggerFactory loggerFactory,
@@ -33,8 +32,7 @@ namespace MyTwitchBot
             TwitchEventSubClient eventSubClient,
             ChatContext context,
             FollowerTracker followerTracker,
-            string channelName,
-            string oauthToken)
+            string channelName)
         {
             _loggerFactory = loggerFactory;
             _dispatcher = dispatcher;
@@ -42,7 +40,6 @@ namespace MyTwitchBot
             _eventSubClient = eventSubClient;
             _context = context;
             _channelName = channelName;
-            _oauthToken = oauthToken;
             _followerTracker = followerTracker;
 
             ILogger<TwitchBotRunner> _logger = _loggerFactory.CreateLogger<TwitchBotRunner>();
@@ -51,30 +48,60 @@ namespace MyTwitchBot
 
         public static async Task<TwitchBotRunner> CreateAsync()
         {
-            var config = new ConfigurationBuilder()
+            var config = BuildConfig();
+            var loggerFactory = BuildLoggerFactory();
+
+            var sessionLog = new StreamSessionLog();
+            var scrollGenerator = new ScrollGenerator();
+            var voteManager = new AdVoteManager();
+            var quoteRepository = new QuoteRepository();
+            await quoteRepository.LoadAsync();
+
+            var dispatcher = BuildDispatcher(voteManager, sessionLog, scrollGenerator, quoteRepository);
+
+            var appClient = await BuildAppClientAsync(config, dispatcher);
+
+            var followerTracker = new FollowerTracker(appClient, sessionLog);
+            var adMonitor = new AdMonitor(appClient, voteManager);
+            var context = BuildContext(config, appClient);
+            var eventSubClient = BuildEventSubClient(appClient, sessionLog, dispatcher, followerTracker, context);
+
+            return new TwitchBotRunner(
+                loggerFactory,
+                dispatcher,
+                adMonitor,
+                eventSubClient,
+                context,
+                followerTracker,
+                config["Twitch:Channel"]);
+        }
+
+        private static IConfiguration BuildConfig()
+        {
+            return new ConfigurationBuilder()
                 .AddJsonFile("appsettings.json", optional: true)
                 .AddUserSecrets<TwitchBotRunner>()
                 .Build();
+        }
 
-            var loggerFactory = LoggerFactory.Create(builder =>
+        private static ILoggerFactory BuildLoggerFactory()
+        {
+            return LoggerFactory.Create(builder =>
             {
                 builder
                     .SetMinimumLevel(LogLevel.Debug)
                     .AddConsole()
                     .AddFile("logs/twitchbot-{Date}.txt");
             });
+        }
 
-
-           
-            var voteManager = new AdVoteManager();
-
-            var sessionLog = new StreamSessionLog();
-            var scrollGenerator = new ScrollGenerator();
-
+        private static ChatCommandDispatcher BuildDispatcher(
+            AdVoteManager voteManager,
+            StreamSessionLog sessionLog,
+            ScrollGenerator scrollGenerator,
+            QuoteRepository quoteRepository)
+        {
             var dispatcher = new ChatCommandDispatcher();
-
-            var quoteRepository = new QuoteRepository();
-            await quoteRepository.LoadAsync();
 
             dispatcher.Register(new WinCommand());
             dispatcher.Register(new LoseCommand());
@@ -88,10 +115,13 @@ namespace MyTwitchBot
             dispatcher.Register(new QuoteCommand(quoteRepository));
             dispatcher.Register(new QuoteSearchCommand(quoteRepository));
 
-
+            return dispatcher;
+        }
+        private static async Task<TwitchApplicationClient> BuildAppClientAsync(
+            IConfiguration config, ChatCommandDispatcher dispatcher)
+        {
             var allCommands = dispatcher.GetAllCommands();
             var broadcasterScopes = ScopeBuilder.BuildBroadcasterScopes(allCommands);
-
             var hasBotAccount = !string.IsNullOrWhiteSpace(config["Twitch:BotID"]);
 
             var broadcasterOAuth = new TwitchOAuth(
@@ -102,7 +132,7 @@ namespace MyTwitchBot
 
             await broadcasterOAuth.GetAccessTokenAsync();
 
-            TwitchOAuth botOAuth;
+            var botOAuth = broadcasterOAuth;
             if (hasBotAccount)
             {
                 var botScopes = ScopeBuilder.BuildBotScopes(allCommands);
@@ -114,19 +144,17 @@ namespace MyTwitchBot
 
                 await botOAuth.GetAccessTokenAsync();
             }
-            else
-            {
-                botOAuth = broadcasterOAuth;
-            }
 
-            var appClient = new TwitchApplicationClient(
-                broadcasterOAuth, hasBotAccount?botOAuth:broadcasterOAuth,
-                config["Twitch:BroadcasterId"], hasBotAccount?config["Twitch:BotID"]: config["Twitch:BroadcasterId"]);
+            return new TwitchApplicationClient(
+                broadcasterOAuth,
+                botOAuth,
+                config["Twitch:BroadcasterId"],
+                hasBotAccount ? config["Twitch:BotID"] : config["Twitch:BroadcasterId"]);
+        }
 
-            var followerTracker = new FollowerTracker(appClient, sessionLog);
-            var adMonitor = new AdMonitor(appClient, voteManager);
-
-            var context = new ChatContext
+        private static ChatContext BuildContext(IConfiguration config, TwitchApplicationClient appClient)
+        {
+            return new ChatContext
             {
                 AppClient = appClient,
                 ChannelName = config["Twitch:Channel"],
@@ -134,28 +162,25 @@ namespace MyTwitchBot
                 StreakKeeper = new StreakKeeper(),
                 BackupStreakKeeper = new StreakKeeper()
             };
+        }
 
-            var eventSubClient = new TwitchEventSubClient(
+        private static TwitchEventSubClient BuildEventSubClient(
+            TwitchApplicationClient appClient,
+            StreamSessionLog sessionLog,
+            ChatCommandDispatcher dispatcher,
+            FollowerTracker followerTracker,
+            ChatContext context)
+        {
+            return new TwitchEventSubClient(
                 appClient,
                 sessionLog,
                 async (username, isMod, message) =>
                 {
-                    Console.WriteLine($"DEBUG: user={username} mod={isMod} msg={message}");
                     context.Username = username;
                     context.LastMessage = message;
                     await followerTracker.CheckAndTrackAsync(username);
                     await dispatcher.DispatchAsync(message, isMod, context);
                 });
-
-            return new TwitchBotRunner(
-                loggerFactory,
-                dispatcher,
-                adMonitor,
-                eventSubClient,
-                context,
-                followerTracker,
-                config["Twitch:Channel"],
-                config["Twitch:OAuthToken"]);
         }
 
         public async Task RunAsync()
